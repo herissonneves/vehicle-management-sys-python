@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QIcon
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, \
     QHeaderView, QFrame, QLabel, QPushButton, QTableWidgetItem
+from pathlib import Path
 
 from gui.dialogs import (
     AddRefuelDialog,
@@ -15,8 +16,9 @@ from services.fueling import read_refuels
 class VehicleManagerApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowIcon(QIcon(
-            "D:\\Users\\herisson\\documents\\profissional\\portfolio\\gestao-veicular-python\\assets\\icons\\favicon-32x32.png"))
+        icon_path = Path(__file__).resolve().parent.parent / "assets" / "icons" / "favicon-32x32.png"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
 
         self.setWindowTitle("CMSys")
         self.setGeometry(100, 100, 1280, 800)  # Para telas Full HD
