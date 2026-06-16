@@ -1,6 +1,6 @@
 import csv
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QScrollArea, QWidget, QMessageBox
 )
 

@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from PyQt6.QtWidgets import QDialogButtonBox, QLineEdit, QFormLayout, QVBoxLayout, QMessageBox, QDialog
+from PySide6.QtWidgets import QDialogButtonBox, QLineEdit, QFormLayout, QVBoxLayout, QMessageBox, QDialog
 
 from models.refuel import RefuelRecord
 from services.odometer import load_tires_from_csv, calculate_odometer_difference
@@ -41,7 +41,7 @@ class AddFuelingDialog(QDialog):
         layout.addLayout(form_layout)
 
         # Botões OK / Cancelar
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.save_data)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

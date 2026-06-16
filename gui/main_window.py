@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPalette, QIcon
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, \
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette, QIcon
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, \
     QHeaderView, QFrame, QLabel, QPushButton, QTableWidgetItem
 from pathlib import Path
 

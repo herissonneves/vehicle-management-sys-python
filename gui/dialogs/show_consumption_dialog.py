@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLabel, QComboBox, QPushButton, QMessageBox
 )
 
