@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QMessageBox
 
 from models.refuel import RefuelRecord
-from services.fueling import read_refuels, write_refuels, CSV_PATH
+from services.fueling import add_refuel
 
 
 class AddRefuelDialog(QDialog):
@@ -100,9 +100,7 @@ class AddRefuelDialog(QDialog):
 
             record.complete_data()  # Calcula o campo faltante se necessário
 
-            records = read_refuels()
-            records.append(record)
-            write_refuels(CSV_PATH, records)
+            add_refuel(record)
 
             QMessageBox.information(self, "Success", "Fueling registered successfully.")
             self.accept()

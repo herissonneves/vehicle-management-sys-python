@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLabel, QComboBox, QPushButton, QMessageBox
 )
 
-from services.odometer import load_tires_from_csv, calculate_odometer_difference
+from services.odometer import load_tires, calculate_odometer_difference
 
 
 class ShowOdometerDialog(QDialog):
@@ -10,7 +10,7 @@ class ShowOdometerDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Odometer Correction Viewer")
 
-        self.vehicles = load_tires_from_csv()
+        self.vehicles = load_tires()
         if not self.vehicles:
             QMessageBox.critical(self, "Error", "No vehicle/tire data found.")
             self.close()

@@ -1,17 +1,15 @@
 """
 Fuel service module for reading, writing and managing refueling records.
 """
-import csv
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from PySide6.QtWidgets import QDialogButtonBox, QLineEdit, QFormLayout, QVBoxLayout, QMessageBox, QDialog
 
 from models.refuel import RefuelRecord
-from services.odometer import load_tires_from_csv, calculate_odometer_difference
+from services.database import RefuelEntry, session_scope
+from services.odometer import load_tires, calculate_odometer_difference
 
-CSV_PATH = Path("data/refuels.csv")
 MAX_INTERVAL_KM = 1000
 
 
@@ -49,51 +47,60 @@ class AddFuelingDialog(QDialog):
         self.setLayout(layout)
 
 
-def read_refuels(file_path: str | Path = CSV_PATH) -> list[RefuelRecord]:
-    """
-    Reads refuel records from a CSV file and returns them as RefuelRecord objects.
-    """
-    records = []
-    try:
-        with open(file_path, newline='', encoding='utf-8') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                try:
-                    record = RefuelRecord(
-                        date=row['date'],
-                        odometer=int(row['odometer']) if row['odometer'] else 0,
-                        fuel_type=row['fuel_type'],
-                        total_value=float(row['total_value']) if row['total_value'] else None,
-                        price_per_liter=float(row['price_per_liter']) if row['price_per_liter'] else None,
-                        liters=float(row['liters']) if row['liters'] else None,
-                    )
-                    record.complete_data()
-                    records.append(record)
-                except (ValueError, KeyError) as e:
-                    logging.warning(f"Skipping invalid row: {row} - Error: {e}")
-    except FileNotFoundError:
-        logging.warning(f"No existing refuel data found at {file_path}. Returning empty list.")
-    return records
+def _parse_record_date(value: str):
+    return datetime.strptime(value, "%Y-%m-%d").date()
 
 
-def write_refuels(file_path: str | Path, records: list[RefuelRecord]) -> None:
+def _to_refuel_record(entry: RefuelEntry) -> RefuelRecord:
+    return RefuelRecord(
+        date=entry.date.isoformat(),
+        odometer=entry.odometer,
+        fuel_type=entry.fuel_type,
+        total_value=entry.total_value,
+        price_per_liter=entry.price_per_liter,
+        liters=entry.liters,
+    )
+
+
+def read_refuels() -> list[RefuelRecord]:
     """
-    Writes a list of RefuelRecord objects to a CSV file.
+    Reads refuel records from the database and returns them as RefuelRecord objects.
     """
-    with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['date', 'odometer', 'fuel_type', 'total_value', 'price_per_liter', 'liters']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+    with session_scope() as session:
+        entries = session.query(RefuelEntry).order_by(RefuelEntry.odometer.asc()).all()
+        return [_to_refuel_record(entry) for entry in entries]
+
+
+def add_refuel(record: RefuelRecord) -> None:
+    """
+    Stores one refuel record in the database.
+    """
+    with session_scope() as session:
+        session.add(RefuelEntry(
+            date=_parse_record_date(record.date),
+            odometer=record.odometer,
+            fuel_type=record.fuel_type,
+            total_value=record.total_value,
+            price_per_liter=record.price_per_liter,
+            liters=record.liters,
+        ))
+
+
+def write_refuels(records: list[RefuelRecord]) -> None:
+    """
+    Replaces all refuel records in the database.
+    """
+    with session_scope() as session:
+        session.query(RefuelEntry).delete()
         for r in records:
-            writer.writerow({
-                'date': r.date,
-                'odometer': r.odometer,
-                'fuel_type': r.fuel_type,
-                'total_value': f'{r.total_value:.2f}' if r.total_value is not None else '',
-                'price_per_liter': f'{r.price_per_liter:.2f}' if r.price_per_liter is not None else '',
-                'liters': f'{r.liters:.2f}' if r.liters is not None else '',
-            })
-        csvfile.flush()
+            session.add(RefuelEntry(
+                date=_parse_record_date(r.date),
+                odometer=r.odometer,
+                fuel_type=r.fuel_type,
+                total_value=r.total_value,
+                price_per_liter=r.price_per_liter,
+                liters=r.liters,
+            ))
 
 
 def add_fueling() -> None:
@@ -129,9 +136,7 @@ def add_fueling() -> None:
 
         record.complete_data()
 
-        records = read_refuels()
-        records.append(record)
-        write_refuels(CSV_PATH, records)
+        add_refuel(record)
 
         print("Fueling added successfully!")
     except ValueError as e:
@@ -149,9 +154,7 @@ def add_fueling() -> None:
             )
             record.complete_data()
 
-            records = read_refuels()
-            records.append(record)
-            write_refuels(CSV_PATH, records)
+            add_refuel(record)
 
             QMessageBox.information(self, "Success", "Fueling registered successfully.")
             self.accept()
@@ -160,11 +163,11 @@ def add_fueling() -> None:
             QMessageBox.critical(self, "Invalid Input", f"Please check the values: {e}")
 
 
-def show_consumption(csv_path: str = CSV_PATH) -> None:
+def show_consumption() -> None:
     """
     Calculates and displays average fuel consumption (km/l).
     """
-    vehicles = load_tires_from_csv()
+    vehicles = load_tires()
     if not vehicles:
         print("No tire data found to apply odometer correction.")
         return
@@ -173,7 +176,7 @@ def show_consumption(csv_path: str = CSV_PATH) -> None:
     odometer_correction = calculate_odometer_difference(original_tire, current_tire)
     correction_multiplier = odometer_correction.real_distance_per_100km / 100
 
-    records = read_refuels(csv_path)
+    records = read_refuels()
 
     fuel_types = sorted({r.fuel_type for r in records if r.fuel_type})
 

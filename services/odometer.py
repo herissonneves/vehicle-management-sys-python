@@ -6,12 +6,9 @@ The module contains utilities to:
 - Determine how different tire sizes affect odometer readings
 - Calculate actual distances traveled when using non-standard tire sizes
 """
-import csv
-
 from models.odomoter_difference_result import OdometerDifferenceResult
 from models.tire import Tire
-
-CSV_PATH = 'data/vehicle.csv'
+from services.database import VehicleEntry, session_scope
 
 
 def calculate_total_diameter(tire: Tire) -> float:
@@ -56,43 +53,66 @@ def calculate_odometer_difference(original: Tire, replacement: Tire) -> Odometer
     )
 
 
-def load_tires_from_csv(filepath: str = CSV_PATH) -> list[tuple[str, Tire, Tire]]:
+def load_vehicles() -> list[VehicleEntry]:
     """
-    Load tire data from a CSV file and create Tire objects for each vehicle.
+    Load vehicle data from the database.
+    """
+    with session_scope() as session:
+        return session.query(VehicleEntry).order_by(VehicleEntry.id.asc()).all()
 
-    Args:
-        filepath (str): Path to the CSV file.
+
+def load_vehicle_dicts() -> list[dict]:
+    """
+    Load vehicle data from the database using the dictionary shape expected by existing UI code.
+    """
+    vehicles = []
+    for vehicle in load_vehicles():
+        vehicles.append({
+            "brand": vehicle.brand,
+            "model": vehicle.model,
+            "version": vehicle.version,
+            "plate": vehicle.plate,
+            "year": str(vehicle.year),
+            "original_width": str(vehicle.original_width),
+            "original_aspect": str(vehicle.original_aspect),
+            "original_rim": str(vehicle.original_rim),
+            "current_width": str(vehicle.current_width),
+            "current_aspect": str(vehicle.current_aspect),
+            "current_rim": str(vehicle.current_rim),
+            "fuel_tank_capacity": str(vehicle.fuel_tank_capacity or ""),
+        })
+    return vehicles
+
+
+def load_tires() -> list[tuple[str, Tire, Tire]]:
+    """
+    Load tire data from the database and create Tire objects for each vehicle.
 
     Returns:
         list of tuple: Each tuple contains a label and two Tire objects (original and current).
     """
     vehicles = []
-    with open(filepath, newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            label = f"{row['brand']} {row['model']} {row['plate']} ({row['year']})"
-            original = Tire(
-                width=int(row['original_width']),
-                aspect_ratio=int(row['original_aspect']),
-                rim=int(row['original_rim'])
-            )
-            current = Tire(
-                width=int(row['current_width']),
-                aspect_ratio=int(row['current_aspect']),
-                rim=int(row['current_rim'])
-            )
-            vehicles.append((label, original, current))
+    for vehicle in load_vehicles():
+        label = f"{vehicle.brand} {vehicle.model} {vehicle.plate} ({vehicle.year})"
+        original = Tire(
+            width=vehicle.original_width,
+            aspect_ratio=vehicle.original_aspect,
+            rim=vehicle.original_rim,
+        )
+        current = Tire(
+            width=vehicle.current_width,
+            aspect_ratio=vehicle.current_aspect,
+            rim=vehicle.current_rim,
+        )
+        vehicles.append((label, original, current))
     return vehicles
 
 
-def show_odometer_differences_from_file(filepath: str = CSV_PATH):
+def show_odometer_differences_from_file():
     """
-    Print the odometer difference results for each vehicle listed in the CSV.
-
-    Args:
-        filepath (str): Path to the CSV file.
+    Print the odometer difference results for each vehicle listed in the database.
     """
-    vehicles = load_tires_from_csv(filepath)
+    vehicles = load_tires()
 
     for label, original, current in vehicles:
         result = calculate_odometer_difference(original, current)

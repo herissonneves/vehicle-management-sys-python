@@ -3,7 +3,7 @@
 Vehicle Management System is a personal desktop application for tracking vehicle fuel logs, fuel consumption, tire
 pressure recommendations, and odometer correction caused by tire-size changes.
 
-The application is built with Python and PySide6, and stores its data in local CSV files.
+The application is built with Python, PySide6, PostgreSQL, and SQLAlchemy.
 
 ## Features
 
@@ -17,6 +17,7 @@ The application is built with Python and PySide6, and stores its data in local C
 
 - Python 3.14
 - `pip`
+- PostgreSQL
 - macOS, Linux, or Windows with a supported Qt/PySide6 runtime
 
 ## Setup
@@ -46,6 +47,34 @@ py -m venv .venv
 .\.venv\Scripts\activate.bat
 python -m pip install -r requirements.txt
 ```
+
+## Database
+
+The application uses PostgreSQL through SQLAlchemy. By default, it connects to:
+
+```text
+postgresql+psycopg://postgres:postgres@localhost:5432/vehicle_management
+```
+
+Override this by setting `DATABASE_URL`. The configured PostgreSQL user must be able to create databases if the target
+database does not exist yet.
+
+### Configure The Database URL
+
+macOS/Linux:
+
+```bash
+export DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/vehicle_management"
+```
+
+Windows PowerShell:
+
+```bash
+$env:DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/vehicle_management"
+```
+
+On startup, the application checks whether the configured database exists. It creates the database only when it is
+missing, then creates any missing tables automatically.
 
 ## Running The App
 
@@ -80,28 +109,37 @@ main.py
 
 with the working directory set to the project root.
 
-## Data Files
+## Initial Data
 
-The application expects local CSV files under `data/`:
+The application needs at least one vehicle row to calculate odometer correction and tire pressure recommendations.
+Insert a vehicle using your PostgreSQL client:
 
-- `data/vehicle.csv`
-- `data/refuels.csv`
+```sql
+INSERT INTO vehicles (
+    brand, model, version, plate, year,
+    original_width, original_aspect, original_rim,
+    current_width, current_aspect, current_rim,
+    fuel_tank_capacity
+) VALUES (
+    'Toyota', 'Corolla', 'GLI Flex', 'ABC1D23', 2019,
+    195, 65, 15,
+    205, 60, 16,
+    60
+);
+```
 
-These files are ignored by Git because they contain local/personal data. Example files are provided:
+Refueling records can be added through the application UI.
+
+## Legacy CSV Examples
+
+The repository still includes example CSV files under `data/` as reference material for the original file-based format:
 
 - `data/vehicle.example.csv`
 - `data/refuels.example.csv`
 
-Create your local files from the examples:
-
-```bash
-cp data/vehicle.example.csv data/vehicle.csv
-cp data/refuels.example.csv data/refuels.csv
-```
-
 ### Vehicle CSV
 
-`vehicle.csv` stores vehicle and tire configuration:
+Legacy vehicle format:
 
 ```csv
 brand,model,version,plate,year,original_width,original_aspect,original_rim,current_width,current_aspect,current_rim,fuel_tank_capacity
@@ -110,7 +148,7 @@ Toyota,Corolla,GLI Flex,ABC1D23,2019,195,65,15,205,60,16,60
 
 ### Refuels CSV
 
-`refuels.csv` stores fueling records:
+Legacy refueling format:
 
 ```csv
 date,odometer,fuel_type,total_value,price_per_liter,liters
@@ -157,10 +195,10 @@ Some existing tests may need updates as the service API evolves.
 
 ```text
 assets/     Icons and static assets
-data/       Local CSV data and example CSV files
+data/       Legacy CSV example files
 gui/        PySide6 windows and dialogs
 models/     Dataclasses used by services
-services/   Fueling, odometer, and tire logic
+services/   Database, fueling, odometer, and tire logic
 tests/      Automated tests
 main.py     Application entry point
 ```

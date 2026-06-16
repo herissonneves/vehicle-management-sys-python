@@ -1,10 +1,9 @@
-import csv
-
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QScrollArea, QWidget, QMessageBox
 )
 
-CSV_PATH = 'data/vehicle.csv'
+from services.odometer import load_vehicle_dicts
+
 COLD_PRESSURE = 32
 HOT_PRESSURE = 34
 
@@ -18,7 +17,7 @@ class ShowTirePressureDialog(QDialog):
         layout = QVBoxLayout()
 
         try:
-            vehicles = self.load_vehicles_from_csv()
+            vehicles = self.load_vehicles()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load data: {e}")
             self.close()
@@ -50,7 +49,5 @@ class ShowTirePressureDialog(QDialog):
 
         self.setLayout(layout)
 
-    def load_vehicles_from_csv(self) -> list[dict]:
-        with open(CSV_PATH, newline='', encoding='utf-8') as csvfile:
-            reader = csv.DictReader(csvfile)
-            return list(reader)
+    def load_vehicles(self) -> list[dict]:
+        return load_vehicle_dicts()

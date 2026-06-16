@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 
 from services.fueling import read_refuels, MAX_INTERVAL_KM
-from services.odometer import load_tires_from_csv, calculate_odometer_difference
+from services.odometer import load_tires, calculate_odometer_difference
 
 
 class ShowConsumptionDialog(QDialog):
@@ -47,7 +47,7 @@ class ShowConsumptionDialog(QDialog):
         self.fuel_type_combo.addItems(fuel_types)
 
     def calculate_consumption(self):
-        vehicles = load_tires_from_csv()
+        vehicles = load_tires()
         if not vehicles:
             QMessageBox.warning(self, "Error", "No tire data found for odometer correction.")
             return
